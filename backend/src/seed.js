@@ -1,4 +1,4 @@
-import { initializeDatabase, pool, query } from "./db.js";
+import { initializeDatabase, pool, query } from "../config/db.js";
 
 await initializeDatabase();
 await query("TRUNCATE ai_suggestions, dependencies, tasks CASCADE");
@@ -87,7 +87,7 @@ for (const [
 ] of tasks) {
   await query(
     `INSERT INTO tasks (id, title, description, column_name, position, planned_start, duration_days, start_date, end_date)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6 + $7)`,
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6::integer + $7::integer)`,
     [
       taskId,
       title,

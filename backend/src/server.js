@@ -3,7 +3,12 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { z } from "zod";
-import { initializeDatabase, pool, query, withTransaction } from "./db.js";
+import {
+  initializeDatabase,
+  pool,
+  query,
+  withTransaction,
+} from "../config/db.js";
 import {
   computeSchedule,
   computeStatuses,
@@ -172,7 +177,7 @@ app.post("/tasks", async (req, res, next) => {
     );
     await query(
       `INSERT INTO tasks (id, title, description, column_name, position, planned_start, duration_days, start_date, end_date)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6 + $7)`,
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6::integer + $7::integer)`,
       [
         id(),
         payload.title,
@@ -358,40 +363,102 @@ function fallbackSuggestions(target, candidates) {
     }));
 }
 async function aiSuggestions(target, candidates) {
-  if (!process.env.ANTHROPIC_API_KEY)
-    return fallbackSuggestions(target, candidates);
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      signal: AbortSignal.timeout(Number(process.env.AI_TIMEOUT_MS || 8000)),
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
-        max_tokens: 1000,
-        temperature: 0,
-        system:
-          "Suggest prerequisite tasks. Return strict JSON only: an array of {prerequisite_id, confidence, reason}. Use only candidate ids and return [] when unsure.",
-        messages: [
-          { role: "user", content: JSON.stringify({ target, candidates }) },
-        ],
-      }),
-    });
-    if (!response.ok) throw new Error("AI request failed");
-    const data = await response.json();
-    const text = (data.content || [])
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("")
-      .replace(/^```json\s*|\s*```$/g, "");
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return fallbackSuggestions(target, candidates);
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (geminiApiKey) {
+    try {
+      const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": geminiApiKey,
+            "content-type": "application/json",
+          },
+          signal: AbortSignal.timeout(
+            Number(process.env.AI_TIMEOUT_MS || 8000),
+          ),
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [
+                {
+                  text: "Suggest prerequisite tasks. Return strict JSON only: an array of {prerequisite_id, confidence, reason}. Use only candidate ids and return [] when unsure.",
+                },
+              ],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: JSON.stringify({ target, candidates }),
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Gemini request failed (${response.status}): ${errorText}`,
+        );
+      }
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const text = rawText.trim().replace(/^```json\s*|\s*```$/g, "");
+      const parsed = JSON.parse(text);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.error("Gemini AI suggestion error:", err.message);
+      return fallbackSuggestions(target, candidates);
+    }
   }
+
+  if (anthropicApiKey) {
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": anthropicApiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        signal: AbortSignal.timeout(Number(process.env.AI_TIMEOUT_MS || 8000)),
+        body: JSON.stringify({
+          model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+          max_tokens: 1000,
+          temperature: 0,
+          system:
+            "Suggest prerequisite tasks. Return strict JSON only: an array of {prerequisite_id, confidence, reason}. Use only candidate ids and return [] when unsure.",
+          messages: [
+            { role: "user", content: JSON.stringify({ target, candidates }) },
+          ],
+        }),
+      });
+      if (!response.ok) throw new Error("Anthropic AI request failed");
+      const data = await response.json();
+      const text = (data.content || [])
+        .filter((block) => block.type === "text")
+        .map((block) => block.text)
+        .join("")
+        .replace(/^```json\s*|\s*```$/g, "");
+      const parsed = JSON.parse(text);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.error("Anthropic AI suggestion error:", err.message);
+      return fallbackSuggestions(target, candidates);
+    }
+  }
+
+  return fallbackSuggestions(target, candidates);
 }
 
 app.post("/ai/suggest-dependencies", async (req, res, next) => {
