@@ -1,0 +1,81 @@
+/* ============================================================
+   TaskFlow Pro — visual language: an engineering schematic.
+   Dependencies are wiring; the board is a drafting table, not a
+   stack of SaaS cards. Grid paper, hairline rules, corner marks,
+   orthogonal connector lines, mono for anything that's data.
+   ============================================================ */
+
+:root {
+  /* --- color: named tokens --- */
+  --blue-ink: #0d1b2e;       /* page background */
+  --panel: #132540;          /* card / panel surface */
+  --panel-raised: #1a2f52;   /* hovered / raised surface */
+  --line: #2a4468;           /* hairline borders, grid */
+  --line-soft: #1c3150;      /* faint grid lines */
+  --paper: #eef3f8;          /* primary text on dark */
+  --paper-dim: #93a8c4;      /* secondary text */
+  --paper-faint: #5c7295;    /* tertiary / placeholder text */
+
+  --signal-amber: #e3a13c;   /* ready / active signal */
+  --signal-teal: #3fb39a;    /* done */
+  --signal-red: #d1594a;     /* blocked */
+  --signal-violet: #9086d6;  /* review */
+  --signal-amber-dim: #7a5a2c;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--blue-ink);
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--paper);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--signal-amber);
+  color: var(--blue-ink);
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal-amber);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
