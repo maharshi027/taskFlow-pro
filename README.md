@@ -7,7 +7,7 @@ TaskFlow Pro is a dependency-aware Kanban board. Tasks can depend on other tasks
 - Frontend: React, TypeScript, Vite, dnd-kit
 - Backend: Node.js, Express 5, Zod validation
 - Database: PostgreSQL via `pg` with parameterized SQL and transactions
-- Optional AI: Anthropic API, with a deterministic keyword-overlap fallback
+- Optional AI: Google Gemini API (or Anthropic API), with a deterministic keyword-overlap fallback
 
 ## Local setup
 
@@ -72,7 +72,7 @@ All write endpoints return the full `{ tasks, dependencies }` board shape expect
 
 ## AI-Tool Declaration
 
-An AI coding assistant was used to help translate the original Python/FastAPI implementation into Node.js/Express, draft the JavaScript engine tests, and review the PostgreSQL schema and documentation. The resulting code was reviewed and validated locally. The optional runtime dependency-suggestion feature may call Anthropic when `ANTHROPIC_API_KEY` is configured; otherwise it uses the documented offline fallback. The runtime model never receives database credentials or write access.
+An AI coding assistant was used to help translate the original Python/FastAPI implementation into Node.js/Express, draft the JavaScript engine tests, and review the PostgreSQL schema and documentation. The resulting code was reviewed and validated locally. The optional runtime dependency-suggestion feature may call Google Gemini when `GEMINI_API_KEY` is configured (or Anthropic when `ANTHROPIC_API_KEY` is set); otherwise it uses the documented offline fallback. The runtime model never receives database credentials or write access.
 
 ## Key Assumptions
 
