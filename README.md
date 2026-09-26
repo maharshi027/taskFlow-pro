@@ -54,20 +54,21 @@ The focused tests cover diamond scheduling, transitive blocking, and cycle rejec
 
 ## API
 
-| Method | Path                                    | Purpose                                   |
-| ------ | --------------------------------------- | ----------------------------------------- |
-| GET    | `/health`                               | Database-backed health check              |
-| GET    | `/board`                                | Full board with computed dates and status |
-| POST   | `/board/reset-seed`                     | Reset board to 9 benchmark tasks & DAG edges |
-| GET    | `/critical-path`                        | Longest dependency chain                  |
-| POST   | `/tasks`                                | Create a task                             |
-| PATCH  | `/tasks/:id`                            | Update task details                       |
-| DELETE | `/tasks/:id`                            | Delete a task without dependents          |
-| POST   | `/tasks/:id/move`                       | Move a task between columns               |
-| POST   | `/dependencies`                         | Add a cycle-safe dependency               |
-| DELETE | `/dependencies/:taskId/:prerequisiteId` | Remove a dependency                       |
-| POST   | `/ai/suggest-dependencies`              | Get validated suggestions                 |
-| POST   | `/ai/suggestions/:id/decide`            | Accept or reject a suggestion             |
+| Method | Path                                    | Purpose                                                     |
+| ------ | --------------------------------------- | ----------------------------------------------------------- |
+| GET    | `/health`                               | Database-backed health check                                |
+| GET    | `/board`                                | Full board with computed dates and statuses                 |
+| POST   | `/board/reset-seed`                     | Reset board to 9 benchmark tasks & DAG edges                |
+| POST   | `/board/clear`                          | Wipe all tasks & dependencies for a clean production board  |
+| GET    | `/critical-path`                        | Longest dependency chain & duration                         |
+| POST   | `/tasks`                                | Create a task                                               |
+| PATCH  | `/tasks/:id`                            | Update task details (title, dates, duration, description)   |
+| DELETE | `/tasks/:id`                            | Delete task (`?cascade=true` to unlink downstream tasks)    |
+| POST   | `/tasks/:id/move`                       | Move a task between columns (with automatic rollback reblock) |
+| POST   | `/dependencies`                         | Add a cycle-safe dependency                                 |
+| DELETE | `/dependencies/:taskId/:prerequisiteId` | Remove a dependency                                         |
+| POST   | `/ai/suggest-dependencies`              | Get validated suggestions (Gemini or offline keyword fallback) |
+| POST   | `/ai/suggestions/:id/decide`            | Accept or reject a suggestion                               |
 
 All write endpoints return the full `{ tasks, dependencies }` board shape expected by the frontend.
 
@@ -102,15 +103,38 @@ An AI coding assistant was used to help translate the original Python/FastAPI im
 ```text
 taskflow-pro/
 ├── backend/
-│   ├── src/server.js       # Express API and route handlers
-│   ├── src/db.js           # PostgreSQL pool, schema, transactions
-│   ├── src/engine.js       # Pure dependency graph algorithms
-│   ├── src/seed.js         # 9-task demo dataset
-│   ├── test-engine.mjs     # Node test runner tests
-│   ├── package.json
-│   └── .env.example
-└── frontend/
-    └── src/                # React board UI
+│   ├── config/
+│   │   └── db.js                 # PostgreSQL pool, schema initialization, and transaction runner
+│   ├── src/
+│   │   ├── engine.js             # Pure DAG algorithms (topological scheduling, cycle detection, critical path)
+│   │   ├── seed.js               # 9-task diamond workflow benchmark seeder
+│   │   └── server.js             # Express 5 API, validation schemas, AI integration, and routes
+│   ├── test-engine.mjs           # Node test runner suite (diamond scheduling, cycle rejection, rollback)
+│   ├── nodemon.json              # Development reload configuration
+│   ├── package.json              # Backend dependencies and scripts (dev, start, seed, test)
+│   └── .env.example              # Sample backend environment variables template
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Board.jsx         # Kanban drag-and-drop board with search/status filters
+│   │   │   ├── BoardColumn.jsx   # Droppable status columns with drop indicators & empty state
+│   │   │   ├── SchematicView.jsx # Interactive SVG DAG dependency graph with hover path-tracing
+│   │   │   ├── TaskCard.jsx      # Draggable card with status pills, prerequisite chips & critical badges
+│   │   │   ├── TaskModal.jsx     # Task edit/create modal with cascade-delete prompt & dependency manager
+│   │   │   ├── TimelineView.jsx  # Day-by-day Gantt timeline showing converging paths & critical path
+│   │   │   ├── TitleBlock.jsx    # Navigation header with live KPI metrics, view switcher & action CTAs
+│   │   │   └── Toast.jsx         # Non-blocking top-right notification toasts
+│   │   ├── api.js                # Frontend REST API client
+│   │   ├── App.jsx               # Root application state, view routing, and confirmation modals
+│   │   ├── app.css               # Comprehensive design system, dark theme tokens, and animations
+│   │   ├── theme.css             # Supplementary theme variables and utility classes
+│   │   └── main.jsx              # React DOM entry point
+│   ├── index.html                # HTML entry point with modern typography
+│   ├── package.json              # Frontend dependencies (@dnd-kit, vite, react)
+│   ├── vite.config.js            # Vite build and dev server configuration
+│   └── .env.example              # Frontend environment variables template
+├── .gitignore                    # Git ignore rules for node_modules, build artifacts, and env files
+└── README.md                     # Architecture, API specifications, and setup instructions
 ```
 
 ## GitHub and deployment

@@ -1,7 +1,6 @@
 # --- Environment & Credentials ---
 .env
-.env.*
-!.env.example
+
 *.local
 
 # --- Dependencies ---

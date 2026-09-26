@@ -496,7 +496,9 @@ async function aiSuggestions(target, candidates) {
       const parsed = JSON.parse(text);
       return Array.isArray(parsed) ? parsed : [];
     } catch (err) {
-      console.error("Gemini AI suggestion error:", err.message);
+      const summary =
+        err.message.length > 120 ? `${err.message.slice(0, 120)}...` : err.message;
+      console.warn("Gemini AI unavailable, using keyword fallback:", summary);
       return fallbackSuggestions(target, candidates);
     }
   }
@@ -669,6 +671,12 @@ app.post("/ai/suggestions/:suggestionId/decide", async (req, res, next) => {
 });
 
 app.use((error, _req, res, _next) => {
+  if (
+    error.type === "entity.parse.failed" ||
+    (error instanceof SyntaxError && error.status === 400 && "body" in error)
+  ) {
+    return sendError(res, 400, "Invalid JSON payload in request body.");
+  }
   console.error(error);
   if (error.code === "23505")
     return sendError(res, 409, "A record with those values already exists.");
