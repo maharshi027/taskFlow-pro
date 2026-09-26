@@ -77,6 +77,7 @@ const tasks = [
     1,
   ],
 ];
+const colCounts = {};
 for (const [
   taskId,
   title,
@@ -85,6 +86,8 @@ for (const [
   plannedStart,
   durationDays,
 ] of tasks) {
+  const position = colCounts[columnName] || 0;
+  colCounts[columnName] = position + 1;
   await query(
     `INSERT INTO tasks (id, title, description, column_name, position, planned_start, duration_days, start_date, end_date)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6::integer + $7::integer)`,
@@ -93,7 +96,7 @@ for (const [
       title,
       description,
       columnName,
-      tasks.findIndex((task) => task[3] === columnName),
+      position,
       plannedStart,
       durationDays,
     ],

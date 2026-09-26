@@ -25,8 +25,21 @@ const PORT = Number(process.env.PORT || 8000);
 const VALID_COLUMNS = ["backlog", "in_progress", "review", "done"];
 const id = () => crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 
+const configuredOrigin = process.env.FRONTEND_ORIGIN;
 app.use(
-  cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }),
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        (configuredOrigin && origin === configuredOrigin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS policy violation: Origin not allowed"));
+    },
+    credentials: true,
+  }),
 );
 app.use(express.json({ limit: "100kb" }));
 
@@ -172,11 +185,14 @@ app.post("/board/reset-seed", async (_req, res, next) => {
         ["critical_path_ui", "Show critical path", "Highlight the longest dependency chain in the schematic view.", "backlog", 0, 1],
         ["deploy", "Deploy and document", "Add production environment notes, seed instructions, assumptions, and limitations.", "backlog", 0, 1],
       ];
+      const colCounts = {};
       for (const [taskId, title, description, columnName, plannedStart, durationDays] of seedTasks) {
+        const position = colCounts[columnName] || 0;
+        colCounts[columnName] = position + 1;
         await client.query(
           `INSERT INTO tasks (id, title, description, column_name, position, planned_start, duration_days, start_date, end_date)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6::integer + $7::integer)`,
-          [taskId, title, description, columnName, seedTasks.findIndex((t) => t[3] === columnName), plannedStart, durationDays],
+          [taskId, title, description, columnName, position, plannedStart, durationDays],
         );
       }
       const seedEdges = [
@@ -307,12 +323,23 @@ app.post("/tasks/:taskId/move", async (req, res, next) => {
       if (
         computeStatuses(simulated, raw.edges).get(req.params.taskId) ===
         "blocked"
-      )
+      ) {
+        const targetTask = raw.tasks.find((t) => t.id === req.params.taskId);
+        const prereqIds = raw.edges
+          .filter(([t]) => t === req.params.taskId)
+          .map(([, p]) => p);
+        const taskMap = new Map(raw.tasks.map((t) => [t.id, t]));
+        const unmet = prereqIds
+          .map((pId) => taskMap.get(pId))
+          .filter((t) => t && t.column !== "done")
+          .map((t) => `"${t.title}"`);
+        const unmetStr = unmet.length ? ` (${unmet.join(", ")})` : "";
         return sendError(
           res,
           409,
-          `Task '${req.params.taskId}' is Blocked and cannot move to '${payload.column}' until its prerequisites are Done.`,
+          `Cannot move "${targetTask?.title || req.params.taskId}" to ${payload.column}: Task is Blocked until its prerequisite${unmet.length > 1 ? "s" : ""}${unmetStr} are Done.`,
         );
+      }
     }
     await withTransaction(async (client) => {
       await client.query(
@@ -388,8 +415,13 @@ function checkRateLimit() {
   rateLog.push(now);
   return true;
 }
+const STOP_WORDS = new Set([
+  "the", "and", "a", "an", "for", "in", "on", "to", "of", "with",
+  "is", "it", "this", "that", "tasks", "task", "by", "from", "at"
+]);
 function words(value) {
-  return new Set((value || "").toLowerCase().match(/[a-z]+/g) || []);
+  const matches = (value || "").toLowerCase().match(/[a-z]{2,}/g) || [];
+  return new Set(matches.filter((w) => !STOP_WORDS.has(w)));
 }
 function fallbackSuggestions(target, candidates) {
   const targetWords = words(`${target.title} ${target.description}`);
@@ -410,8 +442,8 @@ function fallbackSuggestions(target, candidates) {
     }));
 }
 async function aiSuggestions(target, candidates) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim();
 
   if (geminiApiKey) {
     try {

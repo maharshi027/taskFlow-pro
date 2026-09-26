@@ -450,6 +450,13 @@
   border: 1px solid var(--status-blocked-border);
 }
 
+.badge--regressed {
+  background: rgba(244, 63, 94, 0.18);
+  color: #FDA4AF;
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.25);
+}
+
 .badge--ready {
   background: var(--status-ready-bg);
   color: var(--status-ready);

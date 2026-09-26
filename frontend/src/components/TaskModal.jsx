@@ -75,6 +75,26 @@ export default function TaskModal({
     return candidates;
   }, [board.tasks, task, myDeps, pickerSearch]);
 
+  // Pre-flight check to see if adding candidateId as prerequisite would create a cycle
+  function wouldCauseCycle(candidateId) {
+    if (!task) return false;
+    if (candidateId === task.id) return true;
+    const visited = new Set();
+    const stack = [task.id];
+    while (stack.length) {
+      const curr = stack.pop();
+      if (curr === candidateId) return true;
+      if (visited.has(curr)) continue;
+      visited.add(curr);
+      for (const dep of board.dependencies) {
+        if (dep.prerequisite_id === curr && !visited.has(dep.task_id)) {
+          stack.push(dep.task_id);
+        }
+      }
+    }
+    return false;
+  }
+
   // Computed schedule preview
   const computedPreview = useMemo(() => {
     if (!task) return null;
@@ -400,22 +420,34 @@ export default function TaskModal({
                       {availablePrereqs.length === 0 ? (
                         <p className="picker-empty mono">No available tasks to add as prerequisite.</p>
                       ) : (
-                        availablePrereqs.map((cand) => (
-                          <div key={cand.id} className="picker-row">
-                            <div className="picker-row__info">
-                              <span className="picker-row__title">{cand.title}</span>
-                              <span className="picker-row__meta mono">
-                                #{cand.id.slice(0, 8)} · Day {cand.start_date}→{cand.end_date} · {cand.column}
-                              </span>
+                        availablePrereqs.map((cand) => {
+                          const causesCycle = wouldCauseCycle(cand.id);
+                          return (
+                            <div key={cand.id} className="picker-row">
+                              <div className="picker-row__info">
+                                <span className="picker-row__title">{cand.title}</span>
+                                <span className="picker-row__meta mono">
+                                  #{cand.id.slice(0, 8)} · Day {cand.start_date}→{cand.end_date} · {cand.column}
+                                </span>
+                              </div>
+                              {causesCycle ? (
+                                <span
+                                  className="badge badge--blocked badge--tiny"
+                                  title="Adding this task as a prerequisite would create an invalid circular dependency loop!"
+                                >
+                                  ⚠️ Cycle Loop
+                                </span>
+                              ) : (
+                                <button
+                                  className="btn btn--tiny btn--solid"
+                                  onClick={() => handleAddDependency(cand.id)}
+                                >
+                                  Add Edge
+                                </button>
+                              )}
                             </div>
-                            <button
-                              className="btn btn--tiny btn--solid"
-                              onClick={() => handleAddDependency(cand.id)}
-                            >
-                              Add Edge
-                            </button>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>

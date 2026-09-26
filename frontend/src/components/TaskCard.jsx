@@ -47,7 +47,13 @@ export default function TaskCard({
       <div className="task-card__header">
         <div className="task-card__badges">
           {/* Main Derived Status Badge */}
-          {isBlocked && (
+          {isBlocked && task.column === "done" && (
+            <span className="badge badge--regressed" title="This task was marked Done, but an upstream prerequisite was moved out of Done!">
+              ⚠️ Re-Blocked (Upstream Regressed)
+            </span>
+          )}
+
+          {isBlocked && task.column !== "done" && (
             <span className="badge badge--blocked" title="Cannot be worked on until all prerequisites are Done">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
