@@ -157,7 +157,29 @@ export default function SchematicView({
 
       {/* Interactive SVG Canvas */}
       <div className="schematic-viewport">
-        <svg width={width} height={height} className="schematic-svg">
+        {board.tasks.length === 0 ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "360px",
+              color: "var(--text-secondary)",
+              textAlign: "center",
+              padding: "48px 24px",
+            }}
+          >
+            <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🕸️</div>
+            <h4 style={{ color: "var(--text-primary)", margin: "0 0 6px 0", fontSize: "16px" }}>
+              Dependency graph is empty
+            </h4>
+            <p style={{ color: "var(--text-muted)", fontSize: "13px", maxWidth: "420px", margin: 0 }}>
+              Create tasks and link prerequisites to visualize your DAG execution graph, converging paths, and critical path here.
+            </p>
+          </div>
+        ) : (
+          <svg width={width} height={height} className="schematic-svg">
           <defs>
             {/* Standard arrowhead */}
             <marker
@@ -434,6 +456,7 @@ export default function SchematicView({
             })}
           </g>
         </svg>
+        )}
       </div>
     </div>
   );

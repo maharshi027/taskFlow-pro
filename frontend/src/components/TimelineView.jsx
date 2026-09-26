@@ -93,7 +93,24 @@ export default function TimelineView({
 
           {/* Task Rows */}
           <div className="timeline-rows">
-            {sortedTasks.map((task) => {
+            {sortedTasks.length === 0 ? (
+              <div
+                style={{
+                  padding: "60px 24px",
+                  textAlign: "center",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <div style={{ fontSize: "2.2rem", marginBottom: "10px" }}>📅</div>
+                <h4 style={{ color: "var(--text-primary)", margin: "0 0 6px 0", fontSize: "15px" }}>
+                  Timeline is empty
+                </h4>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
+                  Create tasks or load demo data to view scheduled timelines and critical path bars.
+                </p>
+              </div>
+            ) : (
+              sortedTasks.map((task) => {
               const isHovered = hoveredId === task.id;
               const isPrereqOfHovered = activePrereqs.has(task.id);
               const isDependentOfHovered = activeDependents.has(task.id);
@@ -176,7 +193,8 @@ export default function TimelineView({
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </div>
       </div>
