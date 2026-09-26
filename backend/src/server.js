@@ -798,6 +798,7 @@ app.use((error, _req, res, _next) => {
 });
 
 await initializeDatabase();
-app.listen(PORT, () =>
-  console.log(`TaskFlow Pro API listening on http://localhost:${PORT}`),
-);
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`TaskFlow Pro API listening on port ${PORT}`);
+});
