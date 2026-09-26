@@ -21,7 +21,7 @@ import {
 
 dotenv.config();
 const app = express();
-const PORT = Number(process.env.PORT || 8000);
+const PORT = Number(process.env.PORT || 2500);
 const VALID_COLUMNS = ["backlog", "in_progress", "review", "done"];
 const id = () => crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 
