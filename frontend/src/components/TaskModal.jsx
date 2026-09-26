@@ -27,6 +27,7 @@ export default function TaskModal({
   // Prerequisite Picker
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
+  const [showCascadeConfirm, setShowCascadeConfirm] = useState(false);
 
   const titleById = useMemo(
     () => new Map(board.tasks.map((item) => [item.id, item])),
@@ -137,24 +138,16 @@ export default function TaskModal({
     }
   }
 
-  async function handleDelete() {
+  async function handleDelete(cascade = false) {
     if (!task) return;
-    if (dependents.length > 0) {
-      onError(
-        `Cannot delete "${task.title}": ${dependents.length} downstream task(s) depend on it. Remove those dependencies first.`,
-      );
-      return;
-    }
-    if (
-      !window.confirm(
-        `Are you sure you want to delete "${task.title}"? This cannot be undone.`,
-      )
-    ) {
+    if (dependents.length > 0 && !cascade) {
+      setShowCascadeConfirm(true);
       return;
     }
     setSaving(true);
     try {
-      onBoardUpdate(await api.deleteTask(task.id));
+      const updated = await api.deleteTask(task.id, cascade);
+      onBoardUpdate(updated);
       onClose();
     } catch (error) {
       onError(
@@ -162,6 +155,19 @@ export default function TaskModal({
       );
     } finally {
       setSaving(false);
+      setShowCascadeConfirm(false);
+    }
+  }
+
+  async function handleUnlinkDownstream(dependentTaskId) {
+    if (!task) return;
+    try {
+      const updated = await api.deleteDependency(dependentTaskId, task.id);
+      onBoardUpdate(updated);
+    } catch (error) {
+      onError(
+        error instanceof ApiError ? error.message : "Couldn't unlink dependency.",
+      );
     }
   }
 
@@ -523,6 +529,13 @@ export default function TaskModal({
                             #{taskId.slice(0, 8)} · Schedule: Day {dependentTask?.start_date}→{dependentTask?.end_date} · Status: {dependentTask?.status || "unknown"}
                           </span>
                         </div>
+                        <button
+                          className="btn btn--tiny btn--danger"
+                          onClick={() => handleUnlinkDownstream(taskId)}
+                          title="Disconnect this downstream dependency"
+                        >
+                          Unlink
+                        </button>
                       </div>
                     ))
                   )}
@@ -624,34 +637,69 @@ export default function TaskModal({
         {/* Modal Footer */}
         <div className="modal__footer">
           {!isNew ? (
-            <button
-              className="btn btn--ghost btn--danger"
-              onClick={handleDelete}
-              disabled={saving}
-              title={
-                dependents.length > 0
-                  ? "Cannot delete task while downstream tasks depend on it"
-                  : "Delete this task"
-              }
-            >
-              🗑️ Delete Task
-            </button>
+            <div className="modal__footer-left">
+              {showCascadeConfirm ? (
+                <div className="cascade-confirm-box">
+                  <span className="cascade-confirm-text">
+                    ⚠️ {dependents.length} downstream task(s) depend on this. Delete and unlink dependencies?
+                  </span>
+                  <div className="cascade-confirm-btns">
+                    <button
+                      className="btn btn--tiny btn--ghost"
+                      onClick={() => setShowCascadeConfirm(false)}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn btn--tiny btn--danger"
+                      onClick={() => handleDelete(true)}
+                      disabled={saving}
+                    >
+                      {saving ? "Deleting..." : "Yes, Delete & Unlink"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    className="btn btn--ghost btn--danger"
+                    onClick={() => handleDelete(false)}
+                    disabled={saving}
+                    title={
+                      dependents.length > 0
+                        ? `This task has ${dependents.length} downstream dependents. Clicking will ask to unlink them.`
+                        : "Delete this task"
+                    }
+                  >
+                    🗑️ Delete Task
+                  </button>
+                  {dependents.length > 0 && (
+                    <span className="cannot-delete-hint mono" title="Deleting this task will unlink its downstream dependencies">
+                      🔗 {dependents.length} dependent{dependents.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           ) : (
             <div />
           )}
 
-          <div className="modal__footer-actions">
-            <button className="btn btn--ghost" onClick={onClose} disabled={saving}>
-              Cancel
-            </button>
-            <button
-              className="btn btn--primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Saving..." : isNew ? "Create Task" : "Save Changes"}
-            </button>
-          </div>
+          {!showCascadeConfirm && (
+            <div className="modal__footer-actions">
+              <button className="btn btn--ghost" onClick={onClose} disabled={saving}>
+                Cancel
+              </button>
+              <button
+                className="btn btn--primary"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : isNew ? "Create Task" : "Save Changes"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

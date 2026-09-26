@@ -300,6 +300,17 @@ app.post("/board/reset-seed", async (_req, res, next) => {
   }
 });
 
+app.post("/board/clear", async (_req, res, next) => {
+  try {
+    await withTransaction(async (client) => {
+      await client.query("TRUNCATE ai_suggestions, dependencies, tasks CASCADE");
+    });
+    res.json(await getBoard());
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/critical-path", async (_req, res, next) => {
   try {
     const raw = await loadRaw();
@@ -374,13 +385,17 @@ app.delete("/tasks/:taskId", async (req, res, next) => {
       "SELECT COUNT(*)::int AS count FROM dependencies WHERE prerequisite_id = $1",
       [req.params.taskId],
     );
-    if (dependents.rows[0].count)
+    const cascade = req.query.cascade === "true" || req.query.cascade === true;
+    if (dependents.rows[0].count && !cascade)
       return sendError(
         res,
         409,
-        `Cannot delete '${req.params.taskId}': ${dependents.rows[0].count} task(s) still depend on it. Remove those dependencies first.`,
+        `Cannot delete '${req.params.taskId}': ${dependents.rows[0].count} task(s) still depend on it. Remove those dependencies first, or pass cascade=true to unlink them.`,
       );
-    await query("DELETE FROM tasks WHERE id = $1", [req.params.taskId]);
+    await withTransaction(async (client) => {
+      await client.query("DELETE FROM tasks WHERE id = $1", [req.params.taskId]);
+      await persistSchedule(client, await getBoard(client));
+    });
     res.json(await getBoard());
   } catch (error) {
     next(error);

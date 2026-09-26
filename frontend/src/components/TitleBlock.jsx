@@ -10,6 +10,8 @@ export default function TitleBlock({
   onNewTask,
   onResetSeed,
   isResetting = false,
+  onClearBoard,
+  isClearing = false,
 }) {
   const total = tasks.length;
   const blocked = tasks.filter((t) => t.status === "blocked").length;
@@ -96,12 +98,21 @@ export default function TitleBlock({
         {/* Right CTA Actions */}
         <div className="navbar__actions">
           <button
+            className="btn btn--ghost btn--small btn--clear"
+            onClick={onClearBoard}
+            disabled={isClearing || isResetting}
+            title="Delete all temporary test tasks and start with a fresh blank canvas for your real project"
+          >
+            {isClearing ? "Clearing..." : "🧹 Fresh Board (Clear All)"}
+          </button>
+
+          <button
             className="btn btn--ghost btn--small btn--reset"
             onClick={onResetSeed}
-            disabled={isResetting}
-            title="Reset board to the default 9-task diamond workflow benchmark"
+            disabled={isClearing || isResetting}
+            title="Load 9 demo tasks and dependencies benchmark"
           >
-            {isResetting ? "Resetting..." : "🔄 Reset Demo"}
+            {isResetting ? "Loading..." : "🔄 Load Demo Data"}
           </button>
 
           <button

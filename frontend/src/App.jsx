@@ -21,6 +21,8 @@ export default function App() {
   const [filterQuery, setFilterQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isResetting, setIsResetting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null); // null | 'clear' | 'reset'
 
   const showToast = useCallback((message, type = "error") => {
     setToast({ message, type });
@@ -99,26 +101,42 @@ export default function App() {
     refreshCriticalPath();
   }
 
-  async function handleResetSeed() {
-    if (
-      !window.confirm(
-        "Reset board to the default 9-task diamond workflow benchmark? Any custom edits will be replaced.",
-      )
-    ) {
-      return;
+  async function executeClearBoard() {
+    setIsClearing(true);
+    setConfirmAction(null);
+    try {
+      const res = await api.clearBoard();
+      setBoard(res);
+      setCriticalPath([]);
+      setCriticalDuration(0);
+      showToast(
+        "✓ All tasks cleared! Fresh blank canvas ready for your production project.",
+        "success",
+      );
+    } catch (err) {
+      showToast(
+        err instanceof ApiError ? err.message : "Failed to clear board.",
+        "error",
+      );
+    } finally {
+      setIsClearing(false);
     }
+  }
+
+  async function executeResetSeed() {
     setIsResetting(true);
+    setConfirmAction(null);
     try {
       const res = await api.resetSeed();
       setBoard(res);
       await refreshCriticalPath();
       showToast(
-        "✓ Board reset to 9 benchmark tasks & dependencies (Diamond DAG workflow).",
+        "✓ Loaded 9 benchmark tasks & dependencies (Diamond DAG workflow).",
         "success",
       );
     } catch (err) {
       showToast(
-        err instanceof ApiError ? err.message : "Failed to reset demo board.",
+        err instanceof ApiError ? err.message : "Failed to load demo board.",
         "error",
       );
     } finally {
@@ -173,8 +191,10 @@ export default function App() {
           setModalTask(null);
           setModalOpen(true);
         }}
-        onResetSeed={handleResetSeed}
+        onResetSeed={() => setConfirmAction("reset")}
         isResetting={isResetting}
+        onClearBoard={() => setConfirmAction("clear")}
+        isClearing={isClearing}
       />
 
       {/* Main View Area */}
@@ -226,6 +246,64 @@ export default function App() {
           onBoardUpdate={handleBoardUpdate}
           onError={(msg) => showToast(msg, "error")}
         />
+      )}
+
+      {/* In-App Confirmation Modal (Replaces browser window.confirm) */}
+      {confirmAction && (
+        <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
+          <div className="modal modal--small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <h3 className="modal__title">
+                {confirmAction === "clear"
+                  ? "🧹 Start Fresh Production Project?"
+                  : "🔄 Load Demo Workflow Benchmark?"}
+              </h3>
+              <button
+                className="modal__close"
+                onClick={() => setConfirmAction(null)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal__body" style={{ padding: "20px 24px" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "13.5px",
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {confirmAction === "clear"
+                  ? "This will delete all temporary demo tasks, dependencies, and suggestions. Your board will be completely empty and ready for your real production project."
+                  : "This will load the standard 9-task diamond dependency workflow benchmark (replacing current tasks)."}
+              </p>
+            </div>
+            <div className="modal__footer">
+              <button
+                className="btn btn--ghost"
+                onClick={() => setConfirmAction(null)}
+                disabled={isClearing || isResetting}
+              >
+                Cancel
+              </button>
+              <button
+                className={`btn ${confirmAction === "clear" ? "btn--danger" : "btn--solid"}`}
+                onClick={confirmAction === "clear" ? executeClearBoard : executeResetSeed}
+                disabled={isClearing || isResetting}
+              >
+                {confirmAction === "clear"
+                  ? isClearing
+                    ? "Clearing..."
+                    : "Yes, Clear All Data"
+                  : isResetting
+                  ? "Loading..."
+                  : "Yes, Load Demo Data"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast Notifications */}

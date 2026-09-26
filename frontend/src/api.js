@@ -38,12 +38,16 @@ async function request(path, init) {
 export const api = {
   getBoard: () => request("/board"),
   resetSeed: () => request("/board/reset-seed", { method: "POST" }),
+  clearBoard: () => request("/board/clear", { method: "POST" }),
   getCriticalPath: () => request("/critical-path"),
   createTask: (data) =>
     request("/tasks", { method: "POST", body: JSON.stringify(data) }),
   updateTask: (id, data) =>
     request(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-  deleteTask: (id) => request(`/tasks/${id}`, { method: "DELETE" }),
+  deleteTask: (id, cascade = false) =>
+    request(`/tasks/${id}${cascade ? "?cascade=true" : ""}`, {
+      method: "DELETE",
+    }),
   moveTask: (id, column, position) =>
     request(`/tasks/${id}/move`, {
       method: "POST",

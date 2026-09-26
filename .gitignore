@@ -2,6 +2,18 @@
 .env
 
 *.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+
 
 # --- Dependencies ---
 node_modules/
