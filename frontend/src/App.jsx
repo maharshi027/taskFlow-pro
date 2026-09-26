@@ -154,7 +154,7 @@ export default function App() {
           <h2>Cannot Connect to API</h2>
           <p>{loadError}</p>
           <p className="load-error__sub">
-            Ensure the backend server is running on <code className="mono">http://localhost:8000</code>.
+            Ensure the backend server is running on <code className="mono">http://localhost:6000</code>.
           </p>
           <button className="btn btn--primary" onClick={refresh}>
             Retry Connection

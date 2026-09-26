@@ -31,7 +31,7 @@ npm run seed
 npm run dev
 ```
 
-The API runs at `http://localhost:8000`. The server creates its tables on startup. The seed command creates **9 realistic tasks** and **9 dependency relationships**, including converging dependency paths.
+The API runs at `http://localhost:6000`. The server creates its tables on startup. The seed command creates **9 realistic tasks** and **9 dependency relationships**, including converging dependency paths.
 
 ### 3. Start the frontend
 
