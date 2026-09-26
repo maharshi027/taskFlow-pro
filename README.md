@@ -54,27 +54,28 @@ The focused tests cover diamond scheduling, transitive blocking, and cycle rejec
 
 ## API
 
-| Method | Path                                    | Purpose                                                     |
-| ------ | --------------------------------------- | ----------------------------------------------------------- |
-| GET    | `/health`                               | Database-backed health check                                |
-| GET    | `/board`                                | Full board with computed dates and statuses                 |
-| POST   | `/board/reset-seed`                     | Reset board to 9 benchmark tasks & DAG edges                |
-| POST   | `/board/clear`                          | Wipe all tasks & dependencies for a clean production board  |
-| GET    | `/critical-path`                        | Longest dependency chain & duration                         |
-| POST   | `/tasks`                                | Create a task                                               |
-| PATCH  | `/tasks/:id`                            | Update task details (title, dates, duration, description)   |
-| DELETE | `/tasks/:id`                            | Delete task (`?cascade=true` to unlink downstream tasks)    |
-| POST   | `/tasks/:id/move`                       | Move a task between columns (with automatic rollback reblock) |
-| POST   | `/dependencies`                         | Add a cycle-safe dependency                                 |
-| DELETE | `/dependencies/:taskId/:prerequisiteId` | Remove a dependency                                         |
+| Method | Path                                    | Purpose                                                        |
+| ------ | --------------------------------------- | -------------------------------------------------------------- |
+| GET    | `/health`                               | Database-backed health check                                   |
+| GET    | `/board`                                | Full board with computed dates and statuses                    |
+| POST   | `/board/reset-seed`                     | Reset board to 9 benchmark tasks & DAG edges                   |
+| POST   | `/board/clear`                          | Wipe all tasks & dependencies for a clean production board     |
+| GET    | `/critical-path`                        | Longest dependency chain & duration                            |
+| POST   | `/tasks`                                | Create a task                                                  |
+| PATCH  | `/tasks/:id`                            | Update task details (title, dates, duration, description)      |
+| DELETE | `/tasks/:id`                            | Delete task (`?cascade=true` to unlink downstream tasks)       |
+| POST   | `/tasks/:id/move`                       | Move a task between columns (with automatic rollback reblock)  |
+| POST   | `/dependencies`                         | Add a cycle-safe dependency                                    |
+| DELETE | `/dependencies/:taskId/:prerequisiteId` | Remove a dependency                                            |
 | POST   | `/ai/suggest-dependencies`              | Get validated suggestions (Gemini or offline keyword fallback) |
-| POST   | `/ai/suggestions/:id/decide`            | Accept or reject a suggestion                               |
+| POST   | `/ai/suggestions/:id/decide`            | Accept or reject a suggestion                                  |
 
 All write endpoints return the full `{ tasks, dependencies }` board shape expected by the frontend.
 
 ## Frontend Views
 
 The application provides three interactive views accessible from the top navigation bar:
+
 - **Kanban Board**: Drag-and-drop workflow across Backlog, In Progress, Review, and Done with live status badges (`Ready`, `Blocked`, `Done`), prerequisite breakdowns (`✓ Complete`, `🔒 Blocking`), downstream impact indicators, and real-time search and status filtering.
 - **DAG Dependency Graph**: Interactive directed acyclic graph visualizer showing sequential execution tiers, smooth Bezier curves, arrowheads, glowing Critical Path edges, and hover path-tracing to clearly inspect upstream prerequisites and downstream dependents.
 - **Gantt Timeline**: Chronological day-by-day Gantt view that visually demonstrates schedule propagation, converging paths (DAG max scheduling), and critical path duration.
@@ -139,4 +140,14 @@ taskflow-pro/
 
 ## GitHub and deployment
 
-Create a public repository, push this project, and configure these backend environment variables on the host: `DATABASE_URL`, `FRONTEND_ORIGIN`, and `PORT`. Run `npm run seed` once against the production database before sharing the frontend URL.
+The repository includes `render.yaml` for a separated Render deployment. It creates a Node web service from `backend/`, a static site from `frontend/`, and a PostgreSQL database. If configuring services manually, use these settings:
+
+- Backend root directory: `backend`
+- Backend build command: `npm ci`
+- Backend start command: `npm start`
+- Backend health check path: `/health`
+- Frontend root directory: `frontend`
+- Frontend build command: `npm ci && npm run build`
+- Frontend publish directory: `dist`
+
+Set `DATABASE_URL` from the Render PostgreSQL service, `FRONTEND_ORIGIN` to the deployed frontend URL, and `VITE_API_URL` to the deployed backend URL. Run `npm run seed` once from the backend service shell against the production database before sharing the frontend URL. Do not use `yarn` or `npm install` as the backend start command.

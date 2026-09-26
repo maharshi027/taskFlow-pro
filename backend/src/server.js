@@ -173,26 +173,106 @@ app.get("/board", async (_req, res, next) => {
 app.post("/board/reset-seed", async (_req, res, next) => {
   try {
     await withTransaction(async (client) => {
-      await client.query("TRUNCATE ai_suggestions, dependencies, tasks CASCADE");
+      await client.query(
+        "TRUNCATE ai_suggestions, dependencies, tasks CASCADE",
+      );
       const seedTasks = [
-        ["schema", "Design PostgreSQL schema", "Define tables and constraints for tasks, dependencies, and AI suggestions.", "done", 0, 2],
-        ["api", "Build Express API", "Implement REST endpoints with validation and PostgreSQL transactions.", "done", 0, 4],
-        ["frontend_shell", "Scaffold React frontend", "Set up the Vite TypeScript application and board layout.", "done", 0, 2],
-        ["dep_engine", "Implement dependency engine", "Add cycle detection, scheduling, status derivation, and critical path logic.", "done", 0, 3],
-        ["dnd", "Connect drag-and-drop board", "Wire column movement to the API and enforce blocked-task rules.", "in_progress", 0, 3],
-        ["ai_suggest", "Add AI dependency suggestions", "Offer validated prerequisite suggestions with a deterministic offline fallback.", "backlog", 0, 2],
-        ["integration_tests", "Write integration tests", "Exercise CRUD, dependency validation, rollback cascades, and API responses.", "backlog", 0, 2],
-        ["critical_path_ui", "Show critical path", "Highlight the longest dependency chain in the schematic view.", "backlog", 0, 1],
-        ["deploy", "Deploy and document", "Add production environment notes, seed instructions, assumptions, and limitations.", "backlog", 0, 1],
+        [
+          "schema",
+          "Design PostgreSQL schema",
+          "Define tables and constraints for tasks, dependencies, and AI suggestions.",
+          "done",
+          0,
+          2,
+        ],
+        [
+          "api",
+          "Build Express API",
+          "Implement REST endpoints with validation and PostgreSQL transactions.",
+          "done",
+          0,
+          4,
+        ],
+        [
+          "frontend_shell",
+          "Scaffold React frontend",
+          "Set up the Vite TypeScript application and board layout.",
+          "done",
+          0,
+          2,
+        ],
+        [
+          "dep_engine",
+          "Implement dependency engine",
+          "Add cycle detection, scheduling, status derivation, and critical path logic.",
+          "done",
+          0,
+          3,
+        ],
+        [
+          "dnd",
+          "Connect drag-and-drop board",
+          "Wire column movement to the API and enforce blocked-task rules.",
+          "in_progress",
+          0,
+          3,
+        ],
+        [
+          "ai_suggest",
+          "Add AI dependency suggestions",
+          "Offer validated prerequisite suggestions with a deterministic offline fallback.",
+          "backlog",
+          0,
+          2,
+        ],
+        [
+          "integration_tests",
+          "Write integration tests",
+          "Exercise CRUD, dependency validation, rollback cascades, and API responses.",
+          "backlog",
+          0,
+          2,
+        ],
+        [
+          "critical_path_ui",
+          "Show critical path",
+          "Highlight the longest dependency chain in the schematic view.",
+          "backlog",
+          0,
+          1,
+        ],
+        [
+          "deploy",
+          "Deploy and document",
+          "Add production environment notes, seed instructions, assumptions, and limitations.",
+          "backlog",
+          0,
+          1,
+        ],
       ];
       const colCounts = {};
-      for (const [taskId, title, description, columnName, plannedStart, durationDays] of seedTasks) {
+      for (const [
+        taskId,
+        title,
+        description,
+        columnName,
+        plannedStart,
+        durationDays,
+      ] of seedTasks) {
         const position = colCounts[columnName] || 0;
         colCounts[columnName] = position + 1;
         await client.query(
           `INSERT INTO tasks (id, title, description, column_name, position, planned_start, duration_days, start_date, end_date)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6::integer + $7::integer)`,
-          [taskId, title, description, columnName, position, plannedStart, durationDays],
+           VALUES ($1, $2, $3, $4, $5, $6::integer, $7::integer, $6::integer, $6::integer + $7::integer)`,
+          [
+            taskId,
+            title,
+            description,
+            columnName,
+            position,
+            plannedStart,
+            durationDays,
+          ],
         );
       }
       const seedEdges = [
@@ -416,8 +496,25 @@ function checkRateLimit() {
   return true;
 }
 const STOP_WORDS = new Set([
-  "the", "and", "a", "an", "for", "in", "on", "to", "of", "with",
-  "is", "it", "this", "that", "tasks", "task", "by", "from", "at"
+  "the",
+  "and",
+  "a",
+  "an",
+  "for",
+  "in",
+  "on",
+  "to",
+  "of",
+  "with",
+  "is",
+  "it",
+  "this",
+  "that",
+  "tasks",
+  "task",
+  "by",
+  "from",
+  "at",
 ]);
 function words(value) {
   const matches = (value || "").toLowerCase().match(/[a-z]{2,}/g) || [];
@@ -497,7 +594,9 @@ async function aiSuggestions(target, candidates) {
       return Array.isArray(parsed) ? parsed : [];
     } catch (err) {
       const summary =
-        err.message.length > 120 ? `${err.message.slice(0, 120)}...` : err.message;
+        err.message.length > 120
+          ? `${err.message.slice(0, 120)}...`
+          : err.message;
       console.warn("Gemini AI unavailable, using keyword fallback:", summary);
       return fallbackSuggestions(target, candidates);
     }
