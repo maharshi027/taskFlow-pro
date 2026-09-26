@@ -26,6 +26,7 @@ const VALID_COLUMNS = ["backlog", "in_progress", "review", "done"];
 const id = () => crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 
 const configuredOrigin = process.env.FRONTEND_ORIGIN;
+
 app.use(
   cors({
     origin: (origin, callback) => {
