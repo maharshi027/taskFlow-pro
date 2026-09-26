@@ -58,6 +58,7 @@ The focused tests cover diamond scheduling, transitive blocking, and cycle rejec
 | ------ | --------------------------------------- | ----------------------------------------- |
 | GET    | `/health`                               | Database-backed health check              |
 | GET    | `/board`                                | Full board with computed dates and status |
+| POST   | `/board/reset-seed`                     | Reset board to 9 benchmark tasks & DAG edges |
 | GET    | `/critical-path`                        | Longest dependency chain                  |
 | POST   | `/tasks`                                | Create a task                             |
 | PATCH  | `/tasks/:id`                            | Update task details                       |
@@ -69,6 +70,13 @@ The focused tests cover diamond scheduling, transitive blocking, and cycle rejec
 | POST   | `/ai/suggestions/:id/decide`            | Accept or reject a suggestion             |
 
 All write endpoints return the full `{ tasks, dependencies }` board shape expected by the frontend.
+
+## Frontend Views
+
+The application provides three interactive views accessible from the top navigation bar:
+- **Kanban Board**: Drag-and-drop workflow across Backlog, In Progress, Review, and Done with live status badges (`Ready`, `Blocked`, `Done`), prerequisite breakdowns (`✓ Complete`, `🔒 Blocking`), downstream impact indicators, and real-time search and status filtering.
+- **DAG Dependency Graph**: Interactive directed acyclic graph visualizer showing sequential execution tiers, smooth Bezier curves, arrowheads, glowing Critical Path edges, and hover path-tracing to clearly inspect upstream prerequisites and downstream dependents.
+- **Gantt Timeline**: Chronological day-by-day Gantt view that visually demonstrates schedule propagation, converging paths (DAG max scheduling), and critical path duration.
 
 ## AI-Tool Declaration
 

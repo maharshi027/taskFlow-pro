@@ -1,32 +1,80 @@
 /* ============================================================
-   TaskFlow Pro — visual language: an engineering schematic.
-   Dependencies are wiring; the board is a drafting table, not a
-   stack of SaaS cards. Grid paper, hairline rules, corner marks,
-   orthogonal connector lines, mono for anything that's data.
+   TaskFlow Pro — Modern Design System & Design Tokens
+   High-contrast, elegant obsidian dark theme with glassmorphism,
+   crisp typography, vibrant semantic indicators, and smooth transitions.
    ============================================================ */
 
 :root {
-  /* --- color: named tokens --- */
-  --blue-ink: #0d1b2e;       /* page background */
-  --panel: #132540;          /* card / panel surface */
-  --panel-raised: #1a2f52;   /* hovered / raised surface */
-  --line: #2a4468;           /* hairline borders, grid */
-  --line-soft: #1c3150;      /* faint grid lines */
-  --paper: #eef3f8;          /* primary text on dark */
-  --paper-dim: #93a8c4;      /* secondary text */
-  --paper-faint: #5c7295;    /* tertiary / placeholder text */
+  /* Surface & Background */
+  --bg-deep: #080D1A;
+  --bg-main: #0B132B;
+  --bg-surface: #111C38;
+  --bg-surface-raised: #18264A;
+  --bg-card: #131E3A;
+  --bg-card-hover: #1A284C;
+  --bg-input: #0A1124;
 
-  --signal-amber: #e3a13c;   /* ready / active signal */
-  --signal-teal: #3fb39a;    /* done */
-  --signal-red: #d1594a;     /* blocked */
-  --signal-violet: #9086d6;  /* review */
-  --signal-amber-dim: #7a5a2c;
+  /* Borders & Hairlines */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.25);
+  --border-glow: rgba(99, 102, 241, 0.4);
 
-  --radius-sm: 3px;
-  --radius-md: 5px;
+  /* Typography / Text Colors */
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-faint: #475569;
 
-  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* Semantic Status Tokens */
+  --status-ready: #F59E0B;
+  --status-ready-bg: rgba(245, 158, 11, 0.12);
+  --status-ready-border: rgba(245, 158, 11, 0.35);
+
+  --status-blocked: #F43F5E;
+  --status-blocked-bg: rgba(244, 63, 94, 0.12);
+  --status-blocked-border: rgba(244, 63, 94, 0.35);
+
+  --status-done: #10B981;
+  --status-done-bg: rgba(16, 185, 129, 0.12);
+  --status-done-border: rgba(16, 185, 129, 0.35);
+
+  --status-progress: #38BDF8;
+  --status-progress-bg: rgba(56, 189, 248, 0.12);
+  --status-progress-border: rgba(56, 189, 248, 0.35);
+
+  --status-review: #A855F7;
+  --status-review-bg: rgba(168, 85, 247, 0.12);
+  --status-review-border: rgba(168, 85, 247, 0.35);
+
+  --status-critical: #FBBF24;
+  --status-critical-bg: rgba(251, 191, 36, 0.15);
+  --status-critical-border: rgba(251, 191, 36, 0.5);
+  --status-critical-glow: 0 0 16px rgba(251, 191, 36, 0.35);
+
+  /* Brand / Primary Accents */
+  --accent-primary: #6366F1;
+  --accent-primary-hover: #4F46E5;
+  --accent-glow: rgba(99, 102, 241, 0.35);
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 24px var(--accent-glow);
+
+  /* Fonts */
+  --font-main: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
 
   color-scheme: dark;
 }
@@ -38,37 +86,65 @@
 html,
 body,
 #root {
+  min-height: 100%;
   height: 100%;
 }
 
 body {
   margin: 0;
-  background-color: var(--blue-ink);
+  background-color: var(--bg-deep);
   background-image:
-    linear-gradient(var(--line-soft) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
-  background-size: 28px 28px;
-  color: var(--paper);
-  font-family: var(--font-display);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent 70%),
+    radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.05), transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: var(--signal-amber);
-  color: var(--blue-ink);
+  background: var(--accent-primary);
+  color: #FFFFFF;
 }
 
 button {
   font-family: inherit;
+  cursor: pointer;
 }
 
 :focus-visible {
-  outline: 2px solid var(--signal-amber);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
 .mono {
   font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(11, 19, 43, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-surface-raised);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import "./theme.css";
 import "./app.css";
 import { api, ApiError } from "./api.js";
@@ -6,6 +6,7 @@ import TitleBlock from "./components/TitleBlock.jsx";
 import Board from "./components/Board.jsx";
 import TaskModal from "./components/TaskModal.jsx";
 import SchematicView from "./components/SchematicView.jsx";
+import TimelineView from "./components/TimelineView.jsx";
 import Toast from "./components/Toast.jsx";
 
 export default function App() {
@@ -13,16 +14,29 @@ export default function App() {
   const [loadError, setLoadError] = useState(null);
   const [modalTask, setModalTask] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [schematicOpen, setSchematicOpen] = useState(false);
+  const [activeView, setActiveView] = useState("board"); // "board" | "schematic" | "timeline"
   const [criticalPath, setCriticalPath] = useState([]);
+  const [criticalDuration, setCriticalDuration] = useState(0);
   const [toast, setToast] = useState(null);
+  const [filterQuery, setFilterQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [isResetting, setIsResetting] = useState(false);
 
-  const showError = useCallback((message) => {
-    setToast(message);
-    window.setTimeout(
-      () => setToast((current) => (current === message ? null : current)),
-      5000,
-    );
+  const showToast = useCallback((message, type = "error") => {
+    setToast({ message, type });
+    window.setTimeout(() => {
+      setToast((current) => (current && current.message === message ? null : current));
+    }, 5500);
+  }, []);
+
+  const refreshCriticalPath = useCallback(async () => {
+    try {
+      const res = await api.getCriticalPath();
+      setCriticalPath(res.path || []);
+      setCriticalDuration(res.total_duration_days || 0);
+    } catch {
+      // critical path fetch failure shouldn't break the board
+    }
   }, []);
 
   const refresh = useCallback(async () => {
@@ -31,62 +45,101 @@ export default function App() {
       setBoard(nextBoard);
       setLoadError(null);
       if (nextBoard.tasks.length > 0) {
-        const critical = await api.getCriticalPath();
-        setCriticalPath(critical.path);
+        await refreshCriticalPath();
       }
     } catch (error) {
       setLoadError(
         error instanceof ApiError ? error.message : "Couldn't load the board.",
       );
     }
-  }, []);
+  }, [refreshCriticalPath]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  async function handleMoveTask(taskId, column, position) {
+  async function handleMoveTask(taskId, targetColumn, position) {
     if (!board) return;
-    const previous = board;
+    const task = board.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const previousBoard = board;
+    const wasDone = task.column === "done";
+    const isMovingAwayFromDone = wasDone && targetColumn !== "done";
+
+    // Optimistic UI update
     setBoard({
       ...board,
-      tasks: board.tasks.map((task) =>
-        task.id === taskId ? { ...task, column, position } : task,
+      tasks: board.tasks.map((item) =>
+        item.id === taskId ? { ...item, column: targetColumn, position } : item,
       ),
     });
+
     try {
-      const updated = await api.moveTask(taskId, column, position);
+      const updated = await api.moveTask(taskId, targetColumn, position);
       setBoard(updated);
-      const critical = await api.getCriticalPath();
-      setCriticalPath(critical.path);
+      await refreshCriticalPath();
+
+      if (isMovingAwayFromDone) {
+        showToast(
+          `🔄 Rollback Cascade: "${task.title}" was moved back from Done. Affected downstream tasks have been re-blocked automatically.`,
+          "info",
+        );
+      }
     } catch (error) {
-      setBoard(previous);
-      showError(
-        error instanceof ApiError ? error.message : "Couldn't move that task.",
-      );
+      // Revert optimistic update
+      setBoard(previousBoard);
+      const msg = error instanceof ApiError ? error.message : "Couldn't move that task.";
+      showToast(msg, "warning");
     }
   }
 
   function handleBoardUpdate(updated) {
     setBoard(updated);
-    api
-      .getCriticalPath()
-      .then((critical) => setCriticalPath(critical.path))
-      .catch(() => undefined);
+    refreshCriticalPath();
   }
+
+  async function handleResetSeed() {
+    if (
+      !window.confirm(
+        "Reset board to the default 9-task diamond workflow benchmark? Any custom edits will be replaced.",
+      )
+    ) {
+      return;
+    }
+    setIsResetting(true);
+    try {
+      const res = await api.resetSeed();
+      setBoard(res);
+      await refreshCriticalPath();
+      showToast(
+        "✓ Board reset to 9 benchmark tasks & dependencies (Diamond DAG workflow).",
+        "success",
+      );
+    } catch (err) {
+      showToast(
+        err instanceof ApiError ? err.message : "Failed to reset demo board.",
+        "error",
+      );
+    } finally {
+      setIsResetting(false);
+    }
+  }
+
+  const criticalPathIds = useMemo(() => new Set(criticalPath), [criticalPath]);
 
   if (loadError && !board) {
     return (
       <div className="load-error">
         <div className="load-error__panel">
-          <p className="mono">connection error</p>
-          <h2>{loadError}</h2>
-          <p>
-            Start the backend with <code className="mono">npm run dev</code> in{" "}
-            <code className="mono">backend/</code>, then reload this page.
+          <span className="mono load-error__tag">CONNECTION ERROR</span>
+          <h2>Cannot Connect to API</h2>
+          <p>{loadError}</p>
+          <p className="load-error__sub">
+            Ensure the backend server is running on <code className="mono">http://localhost:8000</code>.
           </p>
-          <button className="btn btn--solid" onClick={refresh}>
-            Retry
+          <button className="btn btn--primary" onClick={refresh}>
+            Retry Connection
           </button>
         </div>
       </div>
@@ -96,50 +149,87 @@ export default function App() {
   if (!board) {
     return (
       <div className="load-error">
-        <p className="mono">loading board...</p>
+        <div className="loading-spinner-wrap">
+          <div className="loading-spinner" />
+          <p className="mono">Initializing TaskFlow Pro DAG Engine...</p>
+        </div>
       </div>
     );
   }
 
-  const criticalPathIds = new Set(criticalPath);
   return (
     <div className="app-shell">
+      {/* Top Navbar */}
       <TitleBlock
         tasks={board.tasks}
+        criticalPathDuration={criticalDuration}
+        activeView={activeView}
+        onViewChange={setActiveView}
+        filterQuery={filterQuery}
+        onFilterQueryChange={setFilterQuery}
+        filterStatus={filterStatus}
+        onFilterStatusChange={setFilterStatus}
         onNewTask={() => {
           setModalTask(null);
           setModalOpen(true);
         }}
-        onOpenSchematic={() => setSchematicOpen(true)}
+        onResetSeed={handleResetSeed}
+        isResetting={isResetting}
       />
-      <main>
-        <Board
-          board={board}
-          criticalPathIds={criticalPathIds}
-          onOpenTask={(task) => {
-            setModalTask(task);
-            setModalOpen(true);
-          }}
-          onMoveTask={handleMoveTask}
-        />
+
+      {/* Main View Area */}
+      <main className="app-main">
+        {activeView === "board" && (
+          <Board
+            board={board}
+            criticalPathIds={criticalPathIds}
+            onOpenTask={(task) => {
+              setModalTask(task);
+              setModalOpen(true);
+            }}
+            onMoveTask={handleMoveTask}
+            filterQuery={filterQuery}
+            filterStatus={filterStatus}
+          />
+        )}
+
+        {activeView === "schematic" && (
+          <SchematicView
+            board={board}
+            criticalPath={criticalPath}
+            onOpenTask={(task) => {
+              setModalTask(task);
+              setModalOpen(true);
+            }}
+            isModal={false}
+          />
+        )}
+
+        {activeView === "timeline" && (
+          <TimelineView
+            board={board}
+            criticalPath={criticalPath}
+            onOpenTask={(task) => {
+              setModalTask(task);
+              setModalOpen(true);
+            }}
+          />
+        )}
       </main>
+
+      {/* Task Creation / Edit Modal */}
       {modalOpen && (
         <TaskModal
           board={board}
           task={modalTask}
           onClose={() => setModalOpen(false)}
           onBoardUpdate={handleBoardUpdate}
-          onError={showError}
+          onError={(msg) => showToast(msg, "error")}
         />
       )}
-      {schematicOpen && (
-        <SchematicView
-          board={board}
-          criticalPath={criticalPath}
-          onClose={() => setSchematicOpen(false)}
-        />
-      )}
-      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
+
+      {/* Toast Notifications */}
+      {toast && <Toast toast={toast} onDismiss={() => setToast(null)} />}
     </div>
   );
 }

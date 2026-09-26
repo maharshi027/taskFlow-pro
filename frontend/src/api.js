@@ -37,6 +37,7 @@ async function request(path, init) {
 
 export const api = {
   getBoard: () => request("/board"),
+  resetSeed: () => request("/board/reset-seed", { method: "POST" }),
   getCriticalPath: () => request("/critical-path"),
   createTask: (data) =>
     request("/tasks", { method: "POST", body: JSON.stringify(data) }),
