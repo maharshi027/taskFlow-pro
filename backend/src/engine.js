@@ -6,8 +6,8 @@ export class CycleError extends Error {
   }
 }
 
-export class SelfDependencyError extends Error {}
-export class DuplicateEdgeError extends Error {}
+export class SelfDependencyError extends Error { }
+export class DuplicateEdgeError extends Error { }
 
 export function graphFromEdges(taskIds, edges) {
   const successors = new Map(taskIds.map((id) => [id, new Set()]));
@@ -129,6 +129,8 @@ export function descendants(taskId, taskIds, edges) {
   }
   return seen;
 }
+
+// +++++++++++++++++++++++++ criticalPath ++++++++++++++++++++++++++++++++++
 
 export function criticalPath(tasks, edges) {
   const byId = new Map(tasks.map((task) => [task.id, task]));

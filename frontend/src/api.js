@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL  || "http://localhost:6000";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -17,8 +17,8 @@ async function request(path, init) {
   } catch {
     throw new ApiError(
       "Can't reach the TaskFlow Pro API. Is the backend running on " +
-        BASE_URL +
-        "?",
+      BASE_URL +
+      "?",
       0,
     );
   }

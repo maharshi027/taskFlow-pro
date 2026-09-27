@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import "./theme.css";
 import "./app.css";
-import { api, ApiError } from "./api.js";
+import { api, ApiError, BASE_URL } from "./api.js";
 import TitleBlock from "./components/TitleBlock.jsx";
 import Board from "./components/Board.jsx";
 import TaskModal from "./components/TaskModal.jsx";
@@ -154,7 +154,7 @@ export default function App() {
           <h2>Cannot Connect to API</h2>
           <p>{loadError}</p>
           <p className="load-error__sub">
-            Ensure the backend server is running on <code className="mono">http://localhost:6000</code>.
+            Ensure the backend server is running on <code className="mono">{BASE_URL}</code>.
           </p>
           <button className="btn btn--primary" onClick={refresh}>
             Retry Connection

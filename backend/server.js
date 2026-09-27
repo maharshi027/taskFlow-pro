@@ -21,11 +21,11 @@ import {
 
 dotenv.config();
 const app = express();
-const PORT = Number(process.env.PORT || 2500);
+const PORT = Number(process.env.PORT || 5000);
 const VALID_COLUMNS = ["backlog", "in_progress", "review", "done"];
 const id = () => crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 
-const configuredOrigin = process.env.FRONTEND_ORIGIN;
+const configuredOrigin = process.env.FRONTEND_ORIGIN?.replace(/\/$/, "");
 app.use(
     cors({
         origin: (origin, callback) => {

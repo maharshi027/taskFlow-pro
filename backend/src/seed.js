@@ -120,6 +120,7 @@ for (const [taskId, prerequisiteId] of edges) {
     [`${taskId}-${prerequisiteId}`, taskId, prerequisiteId],
   );
 }
+
 console.log(
   `Seeded ${tasks.length} tasks and ${edges.length} dependencies into PostgreSQL.`,
 );
