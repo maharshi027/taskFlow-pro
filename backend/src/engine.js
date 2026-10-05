@@ -1,3 +1,4 @@
+// Raised when a new dependency would make the task graph circular.
 export class CycleError extends Error {
   constructor(path) {
     super(`Adding this dependency would create a cycle: ${path.join(" -> ")}`);
@@ -6,8 +7,16 @@ export class CycleError extends Error {
   }
 }
 
+// --------------- Raised when a task is linked to itself.
+
 export class SelfDependencyError extends Error { }
+
+// Raised when the same dependency is added more than once.
+
 export class DuplicateEdgeError extends Error { }
+
+// Builds quick lookup maps for tasks and the dependencies between them.
+
 
 export function graphFromEdges(taskIds, edges) {
   const successors = new Map(taskIds.map((id) => [id, new Set()]));
@@ -21,6 +30,9 @@ export function graphFromEdges(taskIds, edges) {
   }
   return { successors, predecessors };
 }
+
+//+++++++++++ Finds a route from one task to another, or returns null when there is none.
+
 
 export function reachable(graph, start, target) {
   if (start === target) return [start];
@@ -37,6 +49,9 @@ export function reachable(graph, start, target) {
   }
   return null;
 }
+
+// ~~~~~~~~~~~~~~ Checks a proposed dependency before it is added to the task graph.
+
 
 export function validateNewDependency(taskIds, edges, taskId, prerequisiteId) {
   if (taskId === prerequisiteId) {
@@ -60,6 +75,9 @@ export function validateNewDependency(taskIds, edges, taskId, prerequisiteId) {
   if (path) throw new CycleError([...path, taskId]);
 }
 
+// --------------- Returns tasks in an order that keeps every prerequisite before its task.
+
+
 export function topologicalOrder(taskIds, edges) {
   const graph = graphFromEdges(taskIds, edges);
   const degree = Object.fromEntries(
@@ -81,6 +99,9 @@ export function topologicalOrder(taskIds, edges) {
   return order;
 }
 
+// Calculates the earliest start and end dates for each task.
+
+
 export function computeSchedule(tasks, edges) {
   const byId = new Map(tasks.map((task) => [task.id, { ...task }]));
   const graph = graphFromEdges([...byId.keys()], edges);
@@ -96,6 +117,9 @@ export function computeSchedule(tasks, edges) {
   }
   return byId;
 }
+
+// ************  Marks each task as ready, blocked, or done based on its prerequisites.
+
 
 export function computeStatuses(tasks, edges) {
   const byId = new Map(tasks.map((task) => [task.id, task]));
@@ -117,6 +141,9 @@ export function computeStatuses(tasks, edges) {
   return statuses;
 }
 
+// Returns every task that depends, directly or indirectly, on the given task.
+
+
 export function descendants(taskId, taskIds, edges) {
   const graph = graphFromEdges(taskIds, edges);
   const seen = new Set();
@@ -130,7 +157,9 @@ export function descendants(taskId, taskIds, edges) {
   return seen;
 }
 
-// +++++++++++++++++++++++++ criticalPath ++++++++++++++++++++++++++++++++++
+// Finds the longest chain of dependent tasks and its total duration.
+
+
 
 export function criticalPath(tasks, edges) {
   const byId = new Map(tasks.map((task) => [task.id, task]));
