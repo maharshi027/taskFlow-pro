@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import "./theme.css";
 import "./app.css";
 import { api, ApiError, BASE_URL } from "./api.js";
@@ -23,6 +23,30 @@ export default function App() {
   const [isResetting, setIsResetting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // null | 'clear' | 'reset'
+  const confirmDialogRef = useRef(null);
+  const confirmBusyRef = useRef(false);
+  confirmBusyRef.current = isClearing || isResetting;
+
+  useEffect(() => {
+    if (!confirmAction) return;
+
+    const previouslyFocused = document.activeElement;
+    confirmDialogRef.current?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && !confirmBusyRef.current) {
+        setConfirmAction(null);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [confirmAction]);
 
   const showToast = useCallback((message, type = "error") => {
     setToast({ message, type });
@@ -251,9 +275,17 @@ export default function App() {
       {/* In-App Confirmation Modal (Replaces browser window.confirm) */}
       {confirmAction && (
         <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
-          <div className="modal modal--small" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal modal--small"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirmation-dialog-title"
+            tabIndex={-1}
+            ref={confirmDialogRef}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal__header">
-              <h3 className="modal__title">
+              <h3 className="modal__title" id="confirmation-dialog-title">
                 {confirmAction === "clear"
                   ? "🧹 Start Fresh Production Project?"
                   : "🔄 Load Demo Workflow Benchmark?"}

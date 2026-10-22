@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { api, ApiError } from "../api.js";
 
 export default function TaskModal({
@@ -28,6 +28,30 @@ export default function TaskModal({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
   const [showCascadeConfirm, setShowCascadeConfirm] = useState(false);
+  const dialogRef = useRef(null);
+  const savingRef = useRef(false);
+  const onCloseRef = useRef(onClose);
+  savingRef.current = saving;
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    dialogRef.current?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && !savingRef.current) {
+        onCloseRef.current();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus();
+      }
+    };
+  }, []);
 
   const titleById = useMemo(
     () => new Map(board.tasks.map((item) => [item.id, item])),
@@ -237,14 +261,22 @@ export default function TaskModal({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal--enhanced" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal modal--enhanced"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="task-dialog-title"
+        tabIndex={-1}
+        ref={dialogRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="modal__header">
           <div className="modal__header-title-group">
             <span className="mono modal__eyebrow">
               {isNew ? "✨ NEW TASK" : `TASK #${task.id.slice(0, 8)}`}
             </span>
-            <h2 className="modal__title">
+            <h2 className="modal__title" id="task-dialog-title">
               {isNew ? "Create Workflow Task" : task.title}
             </h2>
           </div>
